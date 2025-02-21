@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2'; // Importa SweetAlert2
-import './styles/CrearProductoForm.css';
-import { createProduct } from '../../../../services/productServices';
-import { getCategoriesByUser } from '../../../../services/categoryServices';
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import "./styles/CrearProductoForm.css";
+import { createProduct } from "../../../../services/productServices";
+import { getCategoriesByUser } from "../../../../services/categoryServices";
 
 function CrearProductoForm({ isVisible, onClose }) {
-  const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [cantidadDisponible, setCantidadDisponible] = useState('');
-  const [precioCompra, setPrecioCompra] = useState('');
-  const [precioVenta, setPrecioVenta] = useState('');
-  const [imagenes, setImagenes] = useState(null);
-  const [categoriaNombre, setCategoriaNombre] = useState('');
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [cantidadDisponible, setCantidadDisponible] = useState("");
+  const [precioCompra, setPrecioCompra] = useState("");
+  const [precioVenta, setPrecioVenta] = useState("");
+  const [imagenes, setImagenes] = useState([]);
+  const [preview, setPreview] = useState([]); // Para mostrar las imágenes antes de enviarlas
+  const [categoriaNombre, setCategoriaNombre] = useState("");
   const [categorias, setCategorias] = useState([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const categoriasData = await getCategoriesByUser(token);
         setCategorias(categoriasData);
       } catch (error) {
-        console.error('Error al obtener categorías:', error);
+        console.error("Error al obtener categorías:", error);
       }
     };
 
@@ -34,58 +35,59 @@ function CrearProductoForm({ isVisible, onClose }) {
     event.preventDefault();
 
     try {
-      const token = localStorage.getItem('token');
-
+      const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append('nombre', nombre);
-      formData.append('descripcion', descripcion);
-      formData.append('cantidadDisponible', cantidadDisponible);
-      formData.append('precioCompra', precioCompra);
-      formData.append('precioVenta', precioVenta);
-      formData.append('categoriaNombre', categoriaNombre); // Se usa el nombre de la categoría
 
-      if (imagenes) {
-        for (let i = 0; i < imagenes.length; i++) {
-          formData.append('imagenes', imagenes[i]);
-        }
-      }
+      formData.append("nombre", nombre);
+      formData.append("descripcion", descripcion);
+      formData.append("cantidadDisponible", cantidadDisponible);
+      formData.append("precioCompra", precioCompra);
+      formData.append("precioVenta", precioVenta);
+      formData.append("categoriaNombre", categoriaNombre);
+
+      imagenes.forEach((imagen) => {
+        formData.append("imagenes", imagen);
+      });
 
       await createProduct(formData, token);
 
-      // Mostrar alerta de éxito
       Swal.fire({
-        title: '¡Éxito!',
-        text: 'Producto creado satisfactoriamente.',
-        icon: 'success',
-        confirmButtonText: 'OK',
+        title: "¡Éxito!",
+        text: "Producto creado satisfactoriamente.",
+        icon: "success",
+        confirmButtonText: "OK",
       }).then(() => {
-        window.location.reload(); // Recarga la página después de la alerta
+        window.location.reload();
       });
 
-      setNombre('');
-      setDescripcion('');
-      setCantidadDisponible('');
-      setPrecioCompra('');
-      setPrecioVenta('');
-      setImagenes(null);
-      setCategoriaNombre('');
+      setNombre("");
+      setDescripcion("");
+      setCantidadDisponible("");
+      setPrecioCompra("");
+      setPrecioVenta("");
+      setImagenes([]);
+      setPreview([]);
+      setCategoriaNombre("");
       onClose();
     } catch (error) {
-      console.error('Error al crear el producto:', error);
-      
-      // Mostrar alerta de error
+      console.error("Error al crear el producto:", error);
+
       Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.mensaje || 'Hubo un problema al crear el producto.',
-        icon: 'error',
-        confirmButtonText: 'OK',
+        title: "Error",
+        text: error.response?.data?.mensaje || "Hubo un problema al crear el producto.",
+        icon: "error",
+        confirmButtonText: "OK",
       });
     }
   };
 
   const handleImageChange = (event) => {
-    const files = event.target.files;
+    const files = Array.from(event.target.files);
     setImagenes(files);
+
+    // Generar vistas previas de las imágenes
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setPreview(previews);
   };
 
   return (
@@ -101,6 +103,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               placeholder="Nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
+              required
             />
           </div>
           <div className="form-group">
@@ -110,6 +113,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               placeholder="Descripción"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
+              required
             ></textarea>
           </div>
           <div className="form-group">
@@ -120,6 +124,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               placeholder="Cantidad"
               value={cantidadDisponible}
               onChange={(e) => setCantidadDisponible(e.target.value)}
+              required
             />
           </div>
           <div className="form-group">
@@ -130,6 +135,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               placeholder="Precio de Compra"
               value={precioCompra}
               onChange={(e) => setPrecioCompra(e.target.value)}
+              required
             />
           </div>
           <div className="form-group">
@@ -140,6 +146,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               placeholder="Precio de Venta"
               value={precioVenta}
               onChange={(e) => setPrecioVenta(e.target.value)}
+              required
             />
           </div>
           <div className="form-group">
@@ -148,6 +155,7 @@ function CrearProductoForm({ isVisible, onClose }) {
               id="productoCategoria"
               value={categoriaNombre}
               onChange={(e) => setCategoriaNombre(e.target.value)}
+              required
             >
               <option value="">Selecciona una categoría</option>
               {categorias.map((categoria) => (
@@ -163,9 +171,18 @@ function CrearProductoForm({ isVisible, onClose }) {
               type="file"
               id="productoImagenes"
               multiple
+              accept="image/*"
               onChange={handleImageChange}
             />
           </div>
+          {/* Vista previa de imágenes seleccionadas */}
+          {preview.length > 0 && (
+            <div className="preview-container">
+              {preview.map((img, index) => (
+                <img key={index} src={img} alt="Vista previa" className="preview-image" />
+              ))}
+            </div>
+          )}
           <div className="form-buttons">
             <button type="submit">Guardar</button>
             <button type="button" onClick={onClose}>

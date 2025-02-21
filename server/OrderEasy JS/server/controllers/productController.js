@@ -1,10 +1,10 @@
 const Producto = require('../models/productModel');
 const Categoria = require('../models/categoryModel'); // Asegúrate de importar el modelo de Categoría
 
-// Crear un nuevo producto utilizando el nombre de la categoría en lugar del ID
+// Crear un nuevo producto con imágenes
 const createProduct = async (req, res) => {
   try {
-    const { nombre, descripcion, cantidadDisponible, precioCompra, precioVenta, imagenes, categoriaNombre } = req.body;
+    const { nombre, descripcion, cantidadDisponible, precioCompra, precioVenta, categoriaNombre } = req.body;
     const usuarioId = req.usuario.usuarioId; // Usuario autenticado
 
     if (!usuarioId) {
@@ -24,6 +24,9 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ mensaje: 'La categoría no existe o no pertenece al usuario.' });
     }
 
+    // Manejo de imágenes (si se suben)
+    const imagenes = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+
     // Crear el producto con categoriaid y categoria_nombre
     const nuevoProducto = await Producto.create({
       nombre,
@@ -31,10 +34,9 @@ const createProduct = async (req, res) => {
       cantidadDisponible,
       precioCompra,
       precioVenta,
-      imagenes,
+      imagenes, // Guardamos las rutas de las imágenes
       categoriaNombre,
       categoriaid: categoria.categoriaid, // Usamos el ID obtenido de la categoría
-      categoria_nombre: categoriaNombre,  // Guardamos el nombre de la categoría
       usuarioid: usuarioId
     });
 
@@ -48,7 +50,7 @@ const createProduct = async (req, res) => {
   }
 };
 
-
+// Obtener todos los productos del usuario autenticado
 const getAllProducts = async (req, res) => {
   try {
     const usuarioid = req.usuario.usuarioId;
@@ -57,13 +59,18 @@ const getAllProducts = async (req, res) => {
       where: { usuarioid }
     });
 
-    res.status(200).json(productos); // Devuelve solo el array
+    // Convertir las rutas de imágenes a URLs accesibles
+    const productosConImagenes = productos.map(producto => ({
+      ...producto.toJSON(),
+      imagenes: producto.imagenes ? producto.imagenes.map(img => `http://localhost:3000${img}`) : []
+    }));
+
+    res.status(200).json(productosConImagenes);
   } catch (error) {
     console.error('❌ Error al obtener productos:', error);
     res.status(500).json({ mensaje: 'Error al obtener los productos.', error: error.message });
   }
 };
-
 
 // Obtener un producto por ID
 const getProductById = async (req, res) => {
@@ -72,21 +79,24 @@ const getProductById = async (req, res) => {
     const usuarioId = req.usuario.usuarioId;
 
     const producto = await Producto.findOne({
-      where: { productoid: id, usuarioId }
+      where: { productoid: id, usuarioid: usuarioId }
     });
 
     if (!producto) {
       return res.status(404).json({ mensaje: 'Producto no encontrado o no pertenece al usuario.' });
     }
 
-    res.status(200).json({ producto });
+    res.status(200).json({
+      ...producto.toJSON(),
+      imagenes: producto.imagenes ? producto.imagenes.map(img => `http://localhost:3000${img}`) : []
+    });
   } catch (error) {
     console.error('❌ Error al obtener producto:', error);
     res.status(500).json({ mensaje: 'Error al obtener el producto.', error: error.message });
   }
 };
 
-// Actualizar un producto
+// Actualizar un producto (con actualización de imágenes opcional)
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -100,6 +110,9 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ mensaje: 'Producto no encontrado o no pertenece al usuario.' });
     }
 
+    // Si se suben nuevas imágenes, actualizarlas
+    const nuevasImagenes = req.files ? req.files.map(file => `/uploads/${file.filename}`) : producto.imagenes;
+
     // Actualizar los campos del producto
     await producto.update({
       nombre: nombre || producto.nombre,
@@ -107,10 +120,14 @@ const updateProduct = async (req, res) => {
       cantidadDisponible: cantidadDisponible !== undefined ? cantidadDisponible : producto.cantidadDisponible,
       precioCompra: precioCompra !== undefined ? precioCompra : producto.precioCompra,
       precioVenta: precioVenta !== undefined ? precioVenta : producto.precioVenta,
-      categoriaid: categoriaid || producto.categoriaid
+      categoriaid: categoriaid || producto.categoriaid,
+      imagenes: nuevasImagenes
     });
 
-    res.status(200).json({ mensaje: 'Producto actualizado exitosamente.', producto });
+    res.status(200).json({
+      mensaje: 'Producto actualizado exitosamente.',
+      producto
+    });
   } catch (error) {
     console.error('❌ Error al actualizar producto:', error);
     res.status(500).json({ mensaje: 'Error al actualizar el producto.', error: error.message });

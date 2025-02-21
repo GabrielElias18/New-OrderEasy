@@ -41,18 +41,32 @@ function VisualizarProductos({ productos }) {
       {productos.map((producto) => (
         <div key={producto.productoid} className="producto-card" onClick={() => handleProductoClick(producto)}>
           <div className="producto-imagen-container">
-            <div className="producto-imagen-cuadro"></div>
+            {producto.imagenes && producto.imagenes.length > 0 ? (
+              <img
+                src={producto.imagenes[0].startsWith("http") ? producto.imagenes[0] : `http://localhost:3000/uploads/${producto.imagenes[0]}`}
+                alt={producto.nombre}
+                className="producto-imagen"
+                onError={(e) => (e.target.src = "/images/default-product.png")}
+              />
+
+            ) : (
+              <img
+                src="/images/default-product.png"
+                alt="Sin imagen"
+                className="producto-imagen"
+              />
+            )}
           </div>
           <h3 className="producto-nombre">{producto.nombre}</h3>
           <p className="producto-cantidad">Cantidad Disponible: {producto.cantidadDisponible}</p>
         </div>
       ))}
-      
+
       {/* Mostrar el popup con los detalles del producto si hay un producto seleccionado */}
       {productoSeleccionado && (
-        <ProductoInfo 
-          producto={productoSeleccionado} 
-          onClose={handleClosePopup} 
+        <ProductoInfo
+          producto={productoSeleccionado}
+          onClose={handleClosePopup}
           onDelete={() => handleDelete(productoSeleccionado.productoid)} // Pasar la función handleDelete como prop
         />
       )}
